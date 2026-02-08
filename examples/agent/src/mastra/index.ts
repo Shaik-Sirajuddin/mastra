@@ -42,7 +42,7 @@ import {
   stepLoggerProcessor,
 } from './processors/index';
 
-const storage = new LibSQLStore({
+export const storage = new LibSQLStore({
   id: 'mastra-storage',
   url: 'file:./mastra.db',
 });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { mastra } from './mastra/index';
+import { mastra, storage } from './mastra/index';
+import { Memory } from '@mastra/memory';
 
 /**
  * Comprehensive validation tests for all Mastra primitives
@@ -341,8 +342,75 @@ async function validateAllPrimitives() {
   console.log('\n✨ All primitive methods validated: get(key), getById(id), list()');
 }
 
-// Run the validation
-validateAllPrimitives().catch(error => {
-  console.error('❌ Fatal error during validation:', error);
-  process.exit(1);
-});
+// // Run the validation
+// validateAllPrimitives().catch(error => {
+//   console.error('❌ Fatal error during validation:', error);
+//   process.exit(1);
+// });
+
+// Source - https://stackoverflow.com/a/39914235
+// Posted by Dan Dascalescu, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-02-08, License - CC BY-SA 4.0
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function main() {
+  // Create a thread with initial working memory
+  const memory = new Memory({
+    options: {
+      workingMemory: {
+        enabled: true,
+      },
+    },
+    storage: storage,
+  });
+  const thread = await memory.createThread({
+    threadId: 'thread-123',
+    resourceId: 'user-456',
+    title: 'Medical Consultation',
+    metadata: {
+      workingMemory: `# Patient Profile
+    - Name: John Doe
+    - Blood Type: O+
+    - Allergies: Penicillin
+    - Current Medications: None
+    - Medical History: Hypertension (controlled)
+    `,
+    },
+  });
+  let checkPoint = Date.now();
+  await sleep(2000);
+  // Update thread metadata to add/modify working memory
+  await memory.updateThread({
+    id: 'thread-123',
+    title: thread.title ?? '',
+    metadata: {
+      ...thread.metadata,
+      workingMemory: `# Patient Profile
+  - Name: John Doe
+  - Blood Type: O+
+  - Allergies: Penicillin, Ibuprofen  // Updated
+  - Current Medications: Lisinopril 10mg daily  // Added
+  - Medical History: Hypertension (controlled)
+  `,
+    },
+  });
+  const clonedThread = await memory.cloneThread({
+    sourceThreadId: thread.id,
+    metadata: thread.metadata,
+    options: {
+      messageFilter: {
+        endDate: new Date(checkPoint),
+      },
+    },
+  });
+
+  console.log('Original Thread Metadata : ');
+  console.log(thread.metadata);
+
+  console.log('Cloned Thread Metadata : ');
+  console.log(clonedThread.thread.metadata);
+}
+main();
